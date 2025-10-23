@@ -1,0 +1,250 @@
+package routes
+
+import (
+	"bytes"
+	"context"
+	"crypto/hmac"
+	"crypto/sha1"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+
+	"donation-app/server/database"
+	package routes
+
+	import (
+		package routes
+
+		import (
+			"context"
+			"crypto/hmac"
+			"crypto/sha256"
+			"encoding/base64"
+			"encoding/json"
+			"fmt"
+			"log"
+			"math"
+			"net/http"
+			"net/url"
+			"os"
+			"strconv"
+			"strings"
+			"time"
+
+			"github.com/gofiber/fiber/v2"
+			"go.mongodb.org/mongo-driver/bson"
+			"go.mongodb.org/mongo-driver/bson/primitive"
+
+			"donation-app/server/database"
+			"donation-app/server/middleware"
+			"donation-app/server/models"
+			"donation-app/server/utils"
+		)
+
+		type createSessionRequest struct {
+			Amount     float64 `json:"amount"`
+			ToUsername string  `json:"toUsername"`
+		}
+
+		type createSessionResponse struct {
+			Token     string `json:"token"`
+			IframeURL string `json:"iframeUrl"`
+		}
+
+		func RegisterPaymentRoutes(router fiber.Router) {
+			protected := router.Group("", middleware.Protected())
+			protected.Post("/create-session", createSessionHandler)
+		}
+
+		func createSessionHandler(c *fiber.Ctx) error {
+			var req createSessionRequest
+			if err := c.BodyParser(&req); err != nil {
+				return utils.Error(c, fiber.StatusBadRequest, "Geçersiz istek")
+			}
+
+			if req.Amount <= 0 {
+				return utils.Error(c, fiber.StatusBadRequest, "Geçersiz tutar")
+			}
+
+			targetUsername := strings.ToLower(strings.TrimSpace(req.ToUsername))
+
+			user, ok := c.Locals("user").(models.User)
+			if !ok {
+				return utils.Error(c, fiber.StatusUnauthorized, "Oturum geçerli değil")
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			var recipient models.User
+			if err := database.Collection("users").FindOne(ctx, bson.M{"username": targetUsername}).Decode(&recipient); err != nil {
+				return utils.Error(c, fiber.StatusNotFound, "Hedef kullanıcı bulunamadı")
+			}
+
+			merchantID := strings.TrimSpace(os.Getenv("PAYTR_MERCHANT_ID"))
+			merchantKey := strings.TrimSpace(os.Getenv("PAYTR_MERCHANT_KEY"))
+			merchantSalt := strings.TrimSpace(os.Getenv("PAYTR_MERCHANT_SALT"))
+			if merchantID == "" || merchantKey == "" || merchantSalt == "" {
+				return utils.Error(c, fiber.StatusInternalServerError, "PayTR yapılandırılmamış")
+			}
+
+			frontendURL := strings.TrimSpace(os.Getenv("FRONTEND_URL"))
+			if frontendURL == "" {
+				frontendURL = "http://localhost:5173"
+			}
+
+			userIP := c.IP()
+			if userIP == "" {
+				userIP = "127.0.0.1"
+			}
+
+			amountKurus := int(math.Round(req.Amount * 100))
+			merchantOID := primitive.NewObjectID().Hex()
+			currency := "TL"
+			paymentType := "card"
+			installmentCount := "0"
+
+			testMode := strings.TrimSpace(os.Getenv("PAYTR_TEST_MODE"))
+			if testMode == "" {
+				testMode = "1"
+			}
+			non3D := strings.TrimSpace(os.Getenv("PAYTR_NON_3D"))
+			if non3D == "" {
+				non3D = "0"
+			}
+			debugOn := strings.TrimSpace(os.Getenv("PAYTR_DEBUG_ON"))
+			if debugOn == "" {
+				debugOn = "0"
+			}
+
+			email := strings.TrimSpace(user.Email)
+			if email == "" {
+				email = fmt.Sprintf("%s@example.com", user.Username)
+			}
+
+			userName, userSurname := splitName(user.Name)
+			userPhone := strings.TrimSpace(os.Getenv("PAYTR_DEFAULT_PHONE"))
+			if userPhone == "" {
+				userPhone = "+905555555555"
+			}
+
+			userAddress := strings.TrimSpace(user.Bio)
+			if userAddress == "" {
+				userAddress = "Türkiye"
+			}
+
+			basket, err := buildPayTRBasket(recipient.Name, req.Amount)
+			if err != nil {
+				return utils.Error(c, fiber.StatusInternalServerError, "Sepet hazırlanamadı")
+			}
+
+			hashStr := merchantID + userIP + merchantOID + email + strconv.Itoa(amountKurus) + paymentType + installmentCount + currency + testMode + non3D
+			token := generatePayTRToken(hashStr, merchantSalt, merchantKey)
+
+			form := url.Values{}
+			form.Set("merchant_id", merchantID)
+			form.Set("user_ip", userIP)
+			form.Set("merchant_oid", merchantOID)
+			form.Set("email", email)
+			form.Set("payment_amount", strconv.Itoa(amountKurus))
+			form.Set("currency", currency)
+			form.Set("payment_type", paymentType)
+			form.Set("installment_count", installmentCount)
+			form.Set("paytr_token", token)
+			form.Set("test_mode", testMode)
+			form.Set("non_3d", non3D)
+			form.Set("user_name", strings.TrimSpace(userName+" "+userSurname))
+			form.Set("user_address", userAddress)
+			form.Set("user_phone", userPhone)
+			form.Set("merchant_ok_url", fmt.Sprintf("%s/profile/%s?payment=success", strings.TrimRight(frontendURL, "/"), recipient.Username))
+			form.Set("merchant_fail_url", fmt.Sprintf("%s/profile/%s?payment=failed", strings.TrimRight(frontendURL, "/"), recipient.Username))
+			form.Set("timeout_limit", "30")
+			form.Set("debug_on", debugOn)
+			form.Set("language", "tr")
+			form.Set("buyer_email", email)
+			form.Set("buyer_name", userName)
+			form.Set("buyer_surname", userSurname)
+			form.Set("basket_items", basket)
+			form.Set("platform", "bagisla-paytr")
+
+			form.Set("merchant_key", merchantKey)
+			form.Set("merchant_salt", merchantSalt)
+
+			apiURL := strings.TrimSpace(os.Getenv("PAYTR_API_URL"))
+			if apiURL == "" {
+				apiURL = "https://www.paytr.com/odeme/api/get-token"
+			}
+
+			client := &http.Client{Timeout: 15 * time.Second}
+			resp, err := client.PostForm(apiURL, form)
+			if err != nil {
+				return utils.Error(c, fiber.StatusBadGateway, "PayTR servisine ulaşılamadı")
+			}
+			defer resp.Body.Close()
+
+			var result struct {
+				Status string `json:"status"`
+				Token  string `json:"token"`
+				Reason string `json:"reason"`
+			}
+
+			if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+				log.Printf("paytr decode error: %v", err)
+				return utils.Error(c, fiber.StatusBadGateway, "PayTR cevabı okunamadı")
+			}
+
+			if strings.ToLower(result.Status) != "success" {
+				reason := result.Reason
+				if reason == "" {
+					reason = "PayTR token alınamadı"
+				}
+				log.Printf("paytr error: %s", reason)
+				return utils.Error(c, fiber.StatusBadGateway, reason)
+			}
+
+			iframeURL := fmt.Sprintf("https://www.paytr.com/odeme/guvenli/%s", result.Token)
+			return utils.Success(c, fiber.StatusOK, createSessionResponse{Token: result.Token, IframeURL: iframeURL})
+		}
+
+		func splitName(fullName string) (string, string) {
+			parts := strings.Fields(fullName)
+			if len(parts) == 0 {
+				return "Bağışçı", ""
+			}
+			if len(parts) == 1 {
+				return parts[0], "Bağışçı"
+			}
+			return parts[0], strings.Join(parts[1:], " ")
+		}
+
+		func buildPayTRBasket(recipientName string, amount float64) (string, error) {
+			basket := [][]string{{
+				fmt.Sprintf("Bağış - %s", recipientName),
+				fmt.Sprintf("%.2f", amount),
+				"1",
+			}}
+
+			jsonBytes, err := json.Marshal(basket)
+			if err != nil {
+				return "", err
+			}
+
+			return base64.StdEncoding.EncodeToString(jsonBytes), nil
+		}
+
+		func generatePayTRToken(hashStr, merchantSalt, merchantKey string) string {
+			mac := hmac.New(sha256.New, []byte(merchantKey))
+			mac.Write([]byte(hashStr + merchantSalt))
+			return base64.StdEncoding.EncodeToString(mac.Sum(nil))
+		}
