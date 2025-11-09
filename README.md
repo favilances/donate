@@ -1,1 +1,1 @@
-## Bağışla
+## Donate
