@@ -2,6 +2,7 @@ package routes
 
 import (
 	"context"
+	"regexp"
 	"strings"
 	"time"
 
@@ -54,6 +55,9 @@ func registerHandler(c *fiber.Ctx) error {
 	}
 	if len(req.Username) < 3 || len(req.Username) > 30 {
 		return utils.Error(c, fiber.StatusBadRequest, "Kullanıcı adı 3-30 karakter arası olmalı")
+	}
+	if !regexp.MustCompile(`^[a-z0-9_]+$`).MatchString(req.Username) {
+		return utils.Error(c, fiber.StatusBadRequest, "Kullanıcı adı yalnızca harf, rakam ve alt çizgi içerebilir")
 	}
 	if len(req.Name) > 100 {
 		return utils.Error(c, fiber.StatusBadRequest, "İsim en fazla 100 karakter olabilir")
