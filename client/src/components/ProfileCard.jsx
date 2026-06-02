@@ -1,9 +1,7 @@
 import { HeartHandshake, Link2, Share2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
-
-const fallbackAvatar =
-  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYwIiBoZWlnaHQ9IjE2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjE2MCIgaGVpZ2h0PSIxNjAiIHJ4PSI4MCIgZmlsbD0iI0VGRUY3RiIvPgo8Y2lyY2xlIGN4PSI4MCIgY3k9IjYwIiByPSIzNSIgZmlsbD0iI0M2QzhDRiIvPgo8cGF0aCBkPSJNNjAgMTI0YzAtMTkuOTEgMTUuMDktMzAgMzAtMzBzMzAgMTAuMDkgMzAgMzB2MTljMCA2LjYyLTUuMzggMTItMTIgMTJINzJjLTYuNjIgMC0xMi01LjM4LTEyLTEyeiIgZmlsbD0iI0M2QzhDRiIvPgo8L3N2Zz4K'
+import { fallbackAvatar } from '../utils/avatar'
 
 const ProfileCard = ({ profile }) => {
   const shareUrl =
