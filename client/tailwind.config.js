@@ -37,9 +37,14 @@ export default {
           '0%, 100%': { transform: 'translateY(0px)' },
           '50%': { transform: 'translateY(-6px)' },
         },
+        fadeInUp: {
+          from: { transform: 'translateY(20px)', opacity: '0' },
+          to: { transform: 'translateY(0)', opacity: '1' },
+        },
       },
       animation: {
         float: 'float 6s ease-in-out infinite',
+        fadeInUp: 'fadeInUp 0.4s ease forwards',
       },
     },
   },

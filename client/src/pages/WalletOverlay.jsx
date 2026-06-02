@@ -111,7 +111,7 @@ const WalletOverlay = () => {
             {donations.map((donation, index) => (
               <li
                 key={donation.id}
-                className="flex animate-[fadeInUp_0.4s_ease_forwards] items-center justify-between gap-6 overflow-hidden rounded-3xl border border-white/20 bg-white/10 px-6 py-5 text-white shadow-xl shadow-black/30 transition-transform duration-300 hover:-translate-y-1"
+                className="flex animate-fadeInUp items-center justify-between gap-6 overflow-hidden rounded-3xl border border-white/20 bg-white/10 px-6 py-5 text-white shadow-xl shadow-black/30 transition-transform duration-300 hover:-translate-y-1"
                 style={{ animationDelay: `${index * 0.08}s`, opacity: 0 }}
               >
                 <span className="text-2xl font-semibold">
@@ -124,18 +124,6 @@ const WalletOverlay = () => {
         )}
       </main>
 
-      <style>{`
-        @keyframes fadeInUp {
-          from {
-            transform: translateY(20px);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-      `}</style>
     </div>
   )
 }
