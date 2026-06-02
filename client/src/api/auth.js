@@ -41,7 +41,7 @@ export const searchUsers = async (query) => {
 }
 
 export const getSSEUrl = () => {
-  const token = localStorage.getItem('token') || ''
+  const token = localStorage.getItem('donation_token') || ''
   const base = import.meta.env.VITE_API_URL || 'http://localhost:8080'
   return `${base}/api/events?token=${encodeURIComponent(token)}`
 }
