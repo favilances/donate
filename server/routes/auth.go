@@ -140,5 +140,13 @@ func meHandler(c *fiber.Ctx) error {
 		return utils.Error(c, fiber.StatusUnauthorized, "Oturum geçerli değil")
 	}
 
-	return utils.Success(c, fiber.StatusOK, fiber.Map{"user": user.Sanitize()})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var freshUser models.User
+	if err := database.Collection("users").FindOne(ctx, bson.M{"_id": user.ID}).Decode(&freshUser); err != nil {
+		return utils.Error(c, fiber.StatusInternalServerError, "Kullanıcı bilgileri alınamadı")
+	}
+
+	return utils.Success(c, fiber.StatusOK, fiber.Map{"user": freshUser.Sanitize()})
 }
