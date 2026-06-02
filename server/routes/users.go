@@ -20,6 +20,7 @@ type updateProfileRequest struct {
 }
 
 func RegisterUserRoutes(router fiber.Router) {
+	router.Get("/search", searchUsers)
 	router.Get("/:username", getProfile)
 
 	protected := router.Group("", middleware.Protected())
@@ -70,4 +71,38 @@ func updateProfile(c *fiber.Ctx) error {
 	}
 
 	return utils.Success(c, fiber.StatusOK, fiber.Map{"message": "Profil güncellendi"})
+}
+
+func searchUsers(c *fiber.Ctx) error {
+	query := strings.TrimSpace(c.Query("q"))
+	if query == "" {
+		return utils.Error(c, fiber.StatusBadRequest, "Arama sorgusu gerekli")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	filter := bson.M{
+		"$or": bson.A{
+			bson.M{"name": bson.M{"$regex": query, "$options": "i"}},
+			bson.M{"username": bson.M{"$regex": query, "$options": "i"}},
+		},
+	}
+
+	cursor, err := database.Collection("users").Find(ctx, filter)
+	if err != nil {
+		return utils.Error(c, fiber.StatusInternalServerError, "Arama yapılamadı")
+	}
+	defer cursor.Close(ctx)
+
+	users := make([]models.PublicUser, 0)
+	for cursor.Next(ctx) {
+		var user models.User
+		if err := cursor.Decode(&user); err != nil {
+			continue
+		}
+		users = append(users, user.PublicProfile())
+	}
+
+	return utils.Success(c, fiber.StatusOK, fiber.Map{"users": users})
 }

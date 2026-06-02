@@ -81,6 +81,13 @@ const Navbar = () => {
               {menuOpen && (
                 <div className="absolute right-0 z-50 mt-3 w-52 rounded-2xl border border-slate-200/80 bg-white/95 p-2 shadow-xl shadow-slate-900/10 backdrop-blur">
                   <NavLink
+                    to="/discover"
+                    className={({ isActive }) => `flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition hover:bg-slate-100 hover:text-slate-900 ${isActive ? 'text-slate-900' : 'text-slate-600'}`}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Keşfet
+                  </NavLink>
+                  <NavLink
                     to={`/profile/${user?.username}`}
                     className={({ isActive }) => `flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition hover:bg-slate-100 hover:text-slate-900 ${isActive ? 'text-slate-900' : 'text-slate-600'}`}
                     onClick={() => setMenuOpen(false)}
@@ -117,6 +124,9 @@ const Navbar = () => {
             </div>
           ) : (
             <div className="flex items-center gap-2">
+              <NavLink to="/discover" className={navLinkClass}>
+                Keşfet
+              </NavLink>
               <NavLink to="/login" className={navLinkClass}>
                 Giriş
               </NavLink>

@@ -13,6 +13,7 @@ import WalletOverlay from './pages/WalletOverlay.jsx'
 import Cookies from './pages/legal/Cookies.jsx'
 import Privacy from './pages/legal/Privacy.jsx'
 import Terms from './pages/legal/Terms.jsx'
+import Discover from './pages/Discover.jsx'
 import Donate from './pages/Donate.jsx'
 
 function App() {
@@ -59,6 +60,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/discover" element={<Discover />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

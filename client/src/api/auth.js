@@ -35,6 +35,11 @@ export const createDonation = async (payload) => {
   return data
 }
 
+export const searchUsers = async (query) => {
+  const { data } = await api.get('/api/users/search', { params: { q: query } })
+  return data
+}
+
 export const fetchSelectedDonations = async (ids) => {
   const query = Array.isArray(ids) ? ids.join(',') : ids
   const { data } = await api.get(`/api/donations/selected`, {
