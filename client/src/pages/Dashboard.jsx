@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ImageDown, Loader2, MessageSquare } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { updateProfile } from '../api/auth'
+import { fallbackAvatar } from '../utils/avatar'
 import useAuth from '../hooks/useAuth'
 
 const Dashboard = () => {
@@ -131,10 +132,7 @@ const Dashboard = () => {
           <div className="flex flex-col gap-6 rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-soft">
             <div className="flex items-center gap-6">
               <img
-                src={
-                  profile.profilePic ||
-                  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIHJ4PSI1MCIgZmlsbD0iI0VGRUY3RiIvPgo8cGF0aCBkPSJNNTAgNTZhMjQgMjQgMCAxIDAgMC00OCAyNCAyNCAwIDAgMCAwIDQ4em0wIDE0Yy0yMi4wOCAwLTQwIDEyLjIxLTQwIDI3LjI4YTYgNiAwIDAgMCA2IDZoNjguYTYgNiAwIDAgMCA2LTZjMC0xNS4wNy0xNy45Mi0yNy4yOC00MC0yNy4yOFoiIGZpbGw9IiNDNkM4Q0YiLz4KPC9zdmc+Cg=='
-                }
+                src={profile.profilePic || fallbackAvatar}
                 alt="Profil"
                 className="h-24 w-24 rounded-3xl object-cover shadow-soft"
               />
