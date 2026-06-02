@@ -1,4 +1,4 @@
-import { Search, Loader2, User, HeartHandshake } from 'lucide-react'
+import { Search, Loader2, User, HeartHandshake, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { searchUsers } from '../api/auth'
@@ -10,30 +10,47 @@ const Discover = () => {
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
 
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [error, setError] = useState(false)
+  const limit = 20
+
   useEffect(() => {
     if (!query.trim()) {
       setResults([])
       setSearched(false)
+      setPage(1)
+      setTotal(0)
+      setError(false)
       return
     }
 
+    setPage(1)
+  }, [query])
+
+  useEffect(() => {
+    if (!query.trim()) return
+
     const delay = setTimeout(async () => {
       setLoading(true)
+      setError(false)
       try {
-        const data = await searchUsers(query)
+        const data = await searchUsers(query, page)
         setResults(data.users ?? [])
+        setTotal(data.total ?? 0)
         setSearched(true)
       } catch (error) {
         console.error('search error', error)
         setResults([])
+        setError(true)
         setSearched(true)
       } finally {
         setLoading(false)
       }
-    }, 300)
+    }, query ? 300 : 0)
 
     return () => clearTimeout(delay)
-  }, [query])
+  }, [query, page])
 
   return (
     <main className="relative mx-auto flex w-full max-w-5xl flex-col gap-10 px-4 py-16 sm:px-6 lg:px-8">
@@ -65,11 +82,17 @@ const Discover = () => {
         </div>
       )}
 
-      {!loading && searched && results.length === 0 && (
+      {!loading && searched && results.length === 0 && !error && (
         <div className="rounded-3xl border border-slate-200/80 bg-white/90 p-12 text-center shadow-soft">
           <User className="mx-auto h-12 w-12 text-slate-300" />
           <p className="mt-4 text-sm text-slate-500">Sonuç bulunamadı.</p>
           <p className="mt-1 text-xs text-slate-400">Farklı bir arama terimi dene.</p>
+        </div>
+      )}
+
+      {!loading && error && (
+        <div className="rounded-3xl border border-red-200/80 bg-red-50 p-12 text-center shadow-soft">
+          <p className="text-sm text-red-500">Arama sırasında bir hata oluştu. Lütfen tekrar dene.</p>
         </div>
       )}
 
@@ -98,6 +121,30 @@ const Discover = () => {
               <HeartHandshake className="h-5 w-5 flex-shrink-0 text-slate-300 transition group-hover:text-accent" />
             </Link>
           ))}
+        </div>
+      )}
+
+      {results.length > 0 && total > limit && (
+        <div className="flex items-center justify-center gap-4">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <ChevronLeft className="h-4 w-4" /> Geri
+          </button>
+          <span className="text-sm text-slate-500">
+            Sayfa {page} / {Math.ceil(total / limit)}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((p) => p + 1)}
+            disabled={page >= Math.ceil(total / limit)}
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            İleri <ChevronRight className="h-4 w-4" />
+          </button>
         </div>
       )}
 

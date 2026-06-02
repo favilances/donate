@@ -35,8 +35,8 @@ export const createDonation = async (payload) => {
   return data
 }
 
-export const searchUsers = async (query) => {
-  const { data } = await api.get('/api/users/search', { params: { q: query } })
+export const searchUsers = async (query, page = 1) => {
+  const { data } = await api.get('/api/users/search', { params: { q: query, page } })
   return data
 }
 
