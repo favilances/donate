@@ -39,7 +39,11 @@ func main() {
 		log.Fatalf("MongoDB bağlantı hatası: %v", err)
 	}
 
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		EnableTrustedProxyCheck: true,
+		TrustedProxies:          []string{"0.0.0.0/0"},
+		ProxyHeader:             fiber.HeaderXForwardedFor,
+	})
 	app.Use(recover.New())
 	app.Use(logger.New())
 
