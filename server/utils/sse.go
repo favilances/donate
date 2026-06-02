@@ -11,11 +11,11 @@ type SSEEvent struct {
 
 type SSEHub struct {
 	mu      sync.RWMutex
-	clients map[string]chan string
+	clients map[string]map[chan string]struct{}
 }
 
 var Hub = &SSEHub{
-	clients: make(map[string]chan string),
+	clients: make(map[string]map[chan string]struct{}),
 }
 
 func (h *SSEHub) Subscribe(userID string) chan string {
@@ -23,17 +23,23 @@ func (h *SSEHub) Subscribe(userID string) chan string {
 	defer h.mu.Unlock()
 
 	ch := make(chan string, 10)
-	h.clients[userID] = ch
+	if h.clients[userID] == nil {
+		h.clients[userID] = make(map[chan string]struct{})
+	}
+	h.clients[userID][ch] = struct{}{}
 	return ch
 }
 
-func (h *SSEHub) Unsubscribe(userID string) {
+func (h *SSEHub) Unsubscribe(userID string, ch chan string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	if ch, ok := h.clients[userID]; ok {
+	if channels, ok := h.clients[userID]; ok {
+		delete(channels, ch)
 		close(ch)
-		delete(h.clients, userID)
+		if len(channels) == 0 {
+			delete(h.clients, userID)
+		}
 	}
 }
 
@@ -41,10 +47,12 @@ func (h *SSEHub) Publish(userID string, data string) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
-	if ch, ok := h.clients[userID]; ok {
-		select {
-		case ch <- data:
-		default:
+	if channels, ok := h.clients[userID]; ok {
+		for ch := range channels {
+			select {
+			case ch <- data:
+			default:
+			}
 		}
 	}
 }

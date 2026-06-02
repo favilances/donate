@@ -69,7 +69,7 @@ func sseHandler(c *fiber.Ctx) error {
 	c.Set("X-Accel-Buffering", "no")
 
 	ch := utils.Hub.Subscribe(user.ID.Hex())
-	defer utils.Hub.Unsubscribe(user.ID.Hex())
+	defer utils.Hub.Unsubscribe(user.ID.Hex(), ch)
 
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
 		w.WriteString("data: {\"type\":\"connected\"}\n\n")
