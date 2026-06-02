@@ -40,6 +40,12 @@ export const searchUsers = async (query) => {
   return data
 }
 
+export const getSSEUrl = () => {
+  const token = localStorage.getItem('token') || ''
+  const base = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+  return `${base}/api/events?token=${encodeURIComponent(token)}`
+}
+
 export const fetchSelectedDonations = async (ids) => {
   const query = Array.isArray(ids) ? ids.join(',') : ids
   const { data } = await api.get(`/api/donations/selected`, {

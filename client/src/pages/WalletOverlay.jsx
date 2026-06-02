@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { fetchSelectedDonations } from '../api/auth'
+import { fetchSelectedDonations, getSSEUrl } from '../api/auth'
 import { formatCurrency } from '../utils/format'
 
 const AnimatedBackground = () => (
@@ -17,6 +17,7 @@ const WalletOverlay = () => {
   const [searchParams] = useSearchParams()
   const [loading, setLoading] = useState(true)
   const [donations, setDonations] = useState([])
+  const listRef = useRef(null)
 
   const idsParam = searchParams.get('ids')
   const ids = useMemo(
@@ -27,6 +28,14 @@ const WalletOverlay = () => {
         .filter(Boolean),
     [idsParam],
   )
+
+  const addDonation = useCallback((donation) => {
+    setDonations((prev) => {
+      if (prev.some((d) => d.id === donation.id)) return prev
+      const next = [donation, ...prev]
+      return next.slice(0, 50)
+    })
+  }, [])
 
   useEffect(() => {
     const loadDonations = async () => {
@@ -40,7 +49,6 @@ const WalletOverlay = () => {
         setDonations(selectedDonations ?? [])
       } catch (error) {
         console.error('selected donations error', error)
-        toast.error('Seçili bağışlar yüklenemedi')
       } finally {
         setLoading(false)
       }
@@ -48,6 +56,38 @@ const WalletOverlay = () => {
 
     loadDonations()
   }, [ids])
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+
+    const url = getSSEUrl()
+    const eventSource = new EventSource(url)
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        if (data.type === 'new_donation') {
+          addDonation({
+            id: data.id,
+            amount: data.amount,
+            fromUserName: data.fromUserName,
+            date: new Date().toISOString(),
+          })
+        }
+      } catch (error) {
+        console.error('SSE parse error', error)
+      }
+    }
+
+    eventSource.onerror = () => {
+      eventSource.close()
+    }
+
+    return () => {
+      eventSource.close()
+    }
+  }, [addDonation])
 
   const totalAmount = useMemo(
     () => donations.reduce((sum, donation) => sum + (donation.amount ?? 0), 0),
@@ -67,12 +107,12 @@ const WalletOverlay = () => {
             Seçili bağış yok.
           </div>
         ) : (
-          <ul className="space-y-4">
+          <ul ref={listRef} className="space-y-4">
             {donations.map((donation, index) => (
               <li
                 key={donation.id}
-                className="flex items-center justify-between gap-6 overflow-hidden rounded-3xl border border-white/20 bg-white/10 px-6 py-5 text-white shadow-xl shadow-black/30 transition-transform duration-300 hover:-translate-y-1"
-                style={{ animation: `fadeInUp 0.4s ease forwards`, animationDelay: `${index * 0.08}s`, opacity: 0 }}
+                className="flex animate-[fadeInUp_0.4s_ease_forwards] items-center justify-between gap-6 overflow-hidden rounded-3xl border border-white/20 bg-white/10 px-6 py-5 text-white shadow-xl shadow-black/30 transition-transform duration-300 hover:-translate-y-1"
+                style={{ animationDelay: `${index * 0.08}s`, opacity: 0 }}
               >
                 <span className="text-2xl font-semibold">
                   {donation.fromUserName ? donation.fromUserName : 'Anonim bağış'}
@@ -92,16 +132,6 @@ const WalletOverlay = () => {
           }
           to {
             transform: translateY(0);
-            opacity: 1;
-          }
-        }
-        @keyframes pulse {
-          0%, 100% {
-            transform: scale(1);
-            opacity: 0.7;
-          }
-          50% {
-            transform: scale(1.05);
             opacity: 1;
           }
         }

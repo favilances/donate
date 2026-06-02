@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
-import { ExternalLink, Loader2, Sparkles, TrendingUp } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ExternalLink, Loader2, Radio, Sparkles, TrendingUp } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { fetchWalletSummary } from '../api/auth'
+import { fetchWalletSummary, getSSEUrl } from '../api/auth'
 import useAuth from '../hooks/useAuth'
 import { formatCurrency } from '../utils/format'
 
@@ -9,7 +9,18 @@ const Wallet = () => {
   const [summary, setSummary] = useState({ wallet: 0, donations: [] })
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(() => new Set())
+  const [live, setLive] = useState(false)
   const { user } = useAuth()
+  const sseRef = useRef(null)
+
+  const reloadWallet = useCallback(async () => {
+    try {
+      const data = await fetchWalletSummary()
+      setSummary(data)
+    } catch (error) {
+      console.error('wallet refresh error', error)
+    }
+  }, [])
 
   useEffect(() => {
     const loadWallet = async () => {
@@ -26,6 +37,41 @@ const Wallet = () => {
 
     loadWallet()
   }, [])
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+
+    const url = getSSEUrl()
+    const eventSource = new EventSource(url)
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        if (data.type === 'connected') {
+          setLive(true)
+          return
+        }
+        if (data.type === 'new_donation') {
+          reloadWallet()
+          toast.success(`${data.fromUserName || 'Birisi'} bağış yaptı!`)
+        }
+      } catch (error) {
+        console.error('SSE error', error)
+      }
+    }
+
+    eventSource.onerror = () => {
+      setLive(false)
+      eventSource.close()
+    }
+
+    sseRef.current = eventSource
+
+    return () => {
+      eventSource.close()
+    }
+  }, [reloadWallet])
 
   const selectedCount = useMemo(() => selected.size, [selected])
   const hasSelection = selectedCount > 0
@@ -90,27 +136,36 @@ const Wallet = () => {
               </p>
             </div>
 
-            <div className="grid gap-4 text-sm text-white/80 sm:grid-cols-2">
-              <div className="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white">
-                  <TrendingUp className="h-5 w-5" />
-                </span>
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-white/60">Son 30 gün</p>
-                  <p className="text-base font-semibold">
-                    {formatCurrency(
-                      summary.donations
-                        .filter((donation) => {
-                          const date = donation.date ? new Date(donation.date) : null
-                          const diff = date ? (Date.now() - date.getTime()) / (1000 * 60 * 60 * 24) : Infinity
-                          return diff <= 30
-                        })
-                        .reduce((acc, donation) => acc + (donation.amount ?? 0), 0)
-                    )}
-                  </p>
+              <div className="grid gap-4 text-sm text-white/80 sm:grid-cols-2">
+                <div className="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white">
+                    <TrendingUp className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-white/60">Son 30 gün</p>
+                    <p className="text-base font-semibold">
+                      {formatCurrency(
+                        summary.donations
+                          .filter((donation) => {
+                            const date = donation.date ? new Date(donation.date) : null
+                            const diff = date ? (Date.now() - date.getTime()) / (1000 * 60 * 60 * 24) : Infinity
+                            return diff <= 30
+                          })
+                          .reduce((acc, donation) => acc + (donation.amount ?? 0), 0)
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-3">
+                  <span className={`flex h-10 w-10 items-center justify-center rounded-full ${live ? 'bg-emerald-400/20 text-emerald-300' : 'bg-white/20 text-white/60'}`}>
+                    <Radio className={`h-5 w-5 ${live ? 'animate-pulse' : ''}`} />
+                  </span>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-white/60">Canlı</p>
+                    <p className="text-base font-semibold">{live ? 'Bağlı' : 'Bağlı değil'}</p>
+                  </div>
                 </div>
               </div>
-            </div>
           </div>
         </div>
 

@@ -1,12 +1,15 @@
 package routes
 
 import (
+	"bufio"
 	"context"
+	"fmt"
 	"math"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
@@ -33,6 +36,62 @@ func RegisterDonationRoutes(router fiber.Router) {
 	protected.Get("/wallet", walletHandler)
 	protected.Post("/donations", createDonationHandler)
 	protected.Get("/donations/selected", selectedDonationsHandler)
+	protected.Get("/events", sseHandler)
+}
+
+func sseHandler(c *fiber.Ctx) error {
+	user, ok := c.Locals("user").(models.User)
+	if !ok {
+		tokenStr := c.Query("token")
+		if tokenStr == "" {
+			return utils.Error(c, fiber.StatusUnauthorized, "Yetkisiz erişim")
+		}
+		token, err := utils.ValidateToken(tokenStr)
+		if err != nil || !token.Valid {
+			return utils.Error(c, fiber.StatusUnauthorized, "Geçersiz oturum")
+		}
+		claims, _ := token.Claims.(jwt.MapClaims)
+		userID, _ := claims["sub"].(string)
+		objectID, err := primitive.ObjectIDFromHex(userID)
+		if err != nil {
+			return utils.Error(c, fiber.StatusUnauthorized, "Geçersiz kullanıcı")
+		}
+		var userFromDB models.User
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := database.Collection("users").FindOne(ctx, bson.M{"_id": objectID}).Decode(&userFromDB); err != nil {
+			return utils.Error(c, fiber.StatusUnauthorized, "Kullanıcı bulunamadı")
+		}
+		user = userFromDB
+	}
+
+	c.Set("Content-Type", "text/event-stream")
+	c.Set("Cache-Control", "no-cache")
+	c.Set("Connection", "keep-alive")
+	c.Set("X-Accel-Buffering", "no")
+
+	ch := utils.Hub.Subscribe(user.ID.Hex())
+	defer utils.Hub.Unsubscribe(user.ID.Hex())
+
+	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
+		w.WriteString("data: {\"type\":\"connected\"}\n\n")
+		w.Flush()
+
+		for {
+			select {
+			case msg, ok := <-ch:
+				if !ok {
+					return
+				}
+				w.WriteString("data: " + msg + "\n\n")
+				w.Flush()
+			case <-c.Context().Done():
+				return
+			}
+		}
+	})
+
+	return nil
 }
 
 func selectedDonationsHandler(c *fiber.Ctx) error {
@@ -165,6 +224,8 @@ func createDonationHandler(c *fiber.Ctx) error {
 	if donorName == "" {
 		donorName = donor.Username
 	}
+
+	utils.Hub.Publish(recipient.ID.Hex(), `{"type":"new_donation","amount":`+fmt.Sprintf("%.2f", amount)+`,"fromUserName":"`+donorName+`","id":"`+donation.ID.Hex()+`"}`)
 
 	return utils.Success(c, fiber.StatusCreated, fiber.Map{
 		"donation": fiber.Map{
