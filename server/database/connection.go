@@ -36,3 +36,10 @@ func Database() *mongo.Database {
 func Collection(name string) *mongo.Collection {
 	return db.Collection(name)
 }
+
+func Disconnect(ctx context.Context) error {
+	if client != nil {
+		return client.Disconnect(ctx)
+	}
+	return nil
+}

@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -78,8 +80,28 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("Server running on :%s", port)
-	if err := app.Listen(":" + port); err != nil {
-		log.Fatalf("Sunucu başlatılamadı: %v", err)
+	go func() {
+		log.Printf("Server running on :%s", port)
+		if err := app.Listen(":" + port); err != nil {
+			log.Fatalf("Sunucu başlatılamadı: %v", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Server shutting down...")
+	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := app.ShutdownWithContext(ctx); err != nil {
+		log.Fatalf("Sunucu kapatılamadı: %v", err)
 	}
+
+	if err := database.Disconnect(ctx); err != nil {
+		log.Printf("MongoDB bağlantısı kapatılamadı: %v", err)
+	}
+
+	log.Println("Server stopped gracefully")
 }
