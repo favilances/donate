@@ -3,6 +3,7 @@ import { ArrowRight, CheckCircle2, CreditCard, HeartHandshake, Info, Sparkles } 
 import toast from 'react-hot-toast'
 import { Link } from 'react-router-dom'
 import { createDonation } from '../api/auth'
+import { formatCurrency } from '../utils/format'
 import useAuth from '../hooks/useAuth'
 
 const TEST_CARD = {
@@ -11,9 +12,6 @@ const TEST_CARD = {
   expiry: '12/30',
   cvc: '123',
 }
-
-const formatCurrency = (value) =>
-  new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(value)
 
 const DonationForm = ({ recipientUsername }) => {
   const [amount, setAmount] = useState('')
