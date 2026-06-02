@@ -7,6 +7,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"donation-app/server/database"
 	"donation-app/server/middleware"
@@ -89,6 +90,17 @@ func searchUsers(c *fiber.Ctx) error {
 		return utils.Error(c, fiber.StatusBadRequest, "Arama sorgusu gerekli")
 	}
 
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 20)
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 50 {
+		limit = 20
+	}
+	skip := int64((page - 1) * limit)
+	limit64 := int64(limit)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -99,7 +111,16 @@ func searchUsers(c *fiber.Ctx) error {
 		},
 	}
 
-	cursor, err := database.Collection("users").Find(ctx, filter)
+	total, err := database.Collection("users").CountDocuments(ctx, filter)
+	if err != nil {
+		return utils.Error(c, fiber.StatusInternalServerError, "Arama yapılamadı")
+	}
+
+	cursor, err := database.Collection("users").Find(ctx, filter, &options.FindOptions{
+		Skip:  &skip,
+		Limit: &limit64,
+		Sort:  bson.M{"createdAt": -1},
+	})
 	if err != nil {
 		return utils.Error(c, fiber.StatusInternalServerError, "Arama yapılamadı")
 	}
@@ -114,5 +135,9 @@ func searchUsers(c *fiber.Ctx) error {
 		users = append(users, user.PublicProfile())
 	}
 
-	return utils.Success(c, fiber.StatusOK, fiber.Map{"users": users})
+	return utils.Success(c, fiber.StatusOK, fiber.Map{
+		"users": users,
+		"total": total,
+		"page":  page,
+	})
 }
