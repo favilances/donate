@@ -58,7 +58,7 @@ const WalletOverlay = () => {
   }, [ids])
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('donation_token')
     if (!token) return
 
     const url = getSSEUrl()
