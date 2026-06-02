@@ -3,6 +3,7 @@ package routes
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"strings"
@@ -225,7 +226,13 @@ func createDonationHandler(c *fiber.Ctx) error {
 		donorName = donor.Username
 	}
 
-	utils.Hub.Publish(recipient.ID.Hex(), `{"type":"new_donation","amount":`+fmt.Sprintf("%.2f", amount)+`,"fromUserName":"`+donorName+`","id":"`+donation.ID.Hex()+`"}`)
+	eventJSON, _ := json.Marshal(map[string]interface{}{
+		"type":         "new_donation",
+		"amount":       amount,
+		"fromUserName": donorName,
+		"id":           donation.ID.Hex(),
+	})
+	utils.Hub.Publish(recipient.ID.Hex(), string(eventJSON))
 
 	return utils.Success(c, fiber.StatusCreated, fiber.Map{
 		"donation": fiber.Map{
