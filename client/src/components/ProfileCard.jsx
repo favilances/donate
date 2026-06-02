@@ -1,4 +1,4 @@
-import { HeartHandshake, Share2 } from 'lucide-react'
+import { HeartHandshake, Link2, Share2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
@@ -6,16 +6,17 @@ const fallbackAvatar =
   'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYwIiBoZWlnaHQ9IjE2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjE2MCIgaGVpZ2h0PSIxNjAiIHJ4PSI4MCIgZmlsbD0iI0VGRUY3RiIvPgo8Y2lyY2xlIGN4PSI4MCIgY3k9IjYwIiByPSIzNSIgZmlsbD0iI0M2QzhDRiIvPgo8cGF0aCBkPSJNNjAgMTI0YzAtMTkuOTEgMTUuMDktMzAgMzAtMzBzMzAgMTAuMDkgMzAgMzB2MTljMCA2LjYyLTUuMzggMTItMTIgMTJINzJjLTYuNjIgMC0xMi01LjM4LTEyLTEyeiIgZmlsbD0iI0M2QzhDRiIvPgo8L3N2Zz4K'
 
 const ProfileCard = ({ profile }) => {
-  const handleShare = async () => {
-    const shareUrl =
-      typeof window !== 'undefined'
-        ? `${window.location.origin}/profile/${profile.username}`
-        : `/profile/${profile.username}`
-    const shareTitle = `${profile.name} - Bağış kampanyası`
+  const shareUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/profile/${profile.username}`
+      : `/profile/${profile.username}`
+  const shareTitle = `${profile.name} - Bağış kampanyası`
+  const shareText = `${profile.name} için bağış kampanyası! Destek olmak için:`
 
+  const handleNativeShare = async () => {
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
-        await navigator.share({ title: shareTitle, url: shareUrl })
+        await navigator.share({ title: shareTitle, text: shareText, url: shareUrl })
       } catch (error) {
         if (error.name !== 'AbortError') {
           toast.error('Paylaşım tamamlanamadı')
@@ -23,19 +24,32 @@ const ProfileCard = ({ profile }) => {
       }
       return
     }
+    handleCopyLink()
+  }
 
+  const handleCopyLink = async () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
       try {
         await navigator.clipboard.writeText(shareUrl)
         toast.success('Profil bağlantısı kopyalandı')
       } catch (error) {
-        console.error('Share fallback failed', error)
         toast.error('Bağlantı kopyalanamadı')
       }
-      return
     }
+  }
 
-    toast.error('Paylaşma özelliği bu cihazda desteklenmiyor')
+  const shareTwitter = () => {
+    const text = encodeURIComponent(`${shareText} ${shareUrl}`)
+    window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank', 'noopener')
+  }
+
+  const shareWhatsApp = () => {
+    const text = encodeURIComponent(`${shareText} ${shareUrl}`)
+    window.open(`https://wa.me/?text=${text}`, '_blank', 'noopener')
+  }
+
+  const shareFacebook = () => {
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank', 'noopener')
   }
 
   return (
@@ -60,11 +74,42 @@ const ProfileCard = ({ profile }) => {
           </Link>
           <button
             type="button"
-            onClick={handleShare}
+            onClick={handleNativeShare}
             className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
           >
             <Share2 className="h-4 w-4" />
             Paylaş
+          </button>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+          <button
+            type="button"
+            onClick={shareTwitter}
+            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-sky-50 hover:text-sky-600"
+          >
+            𝕏 Twitter
+          </button>
+          <button
+            type="button"
+            onClick={shareWhatsApp}
+            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-emerald-50 hover:text-emerald-600"
+          >
+            WhatsApp
+          </button>
+          <button
+            type="button"
+            onClick={shareFacebook}
+            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-blue-50 hover:text-blue-600"
+          >
+            Facebook
+          </button>
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-100 hover:text-slate-800"
+          >
+            <Link2 className="h-3.5 w-3.5" />
+            Bağlantı kopyala
           </button>
         </div>
       </header>
