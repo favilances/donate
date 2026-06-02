@@ -52,6 +52,15 @@ func registerHandler(c *fiber.Ctx) error {
 	if req.Name == "" || req.Email == "" || req.Username == "" || len(req.Password) < 6 {
 		return utils.Error(c, fiber.StatusBadRequest, "Lütfen tüm alanları doğru doldurun")
 	}
+	if len(req.Username) < 3 || len(req.Username) > 30 {
+		return utils.Error(c, fiber.StatusBadRequest, "Kullanıcı adı 3-30 karakter arası olmalı")
+	}
+	if len(req.Name) > 100 {
+		return utils.Error(c, fiber.StatusBadRequest, "İsim en fazla 100 karakter olabilir")
+	}
+	if len(req.Password) > 72 {
+		return utils.Error(c, fiber.StatusBadRequest, "Şifre en fazla 72 karakter olabilir")
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

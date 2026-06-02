@@ -56,10 +56,20 @@ func updateProfile(c *fiber.Ctx) error {
 
 	update := bson.M{}
 	if req.Bio != nil {
+		if len(*req.Bio) > 600 {
+			return utils.Error(c, fiber.StatusBadRequest, "Biyografi en fazla 600 karakter olabilir")
+		}
 		update["bio"] = *req.Bio
 	}
 	if req.ProfilePic != nil {
-		update["profilePic"] = *req.ProfilePic
+		pic := *req.ProfilePic
+		if pic != "" && !strings.HasPrefix(pic, "http://") && !strings.HasPrefix(pic, "https://") && !strings.HasPrefix(pic, "data:image/") {
+			return utils.Error(c, fiber.StatusBadRequest, "Geçersiz profil görseli URL'si")
+		}
+		if len(pic) > 5*1024*1024 {
+			return utils.Error(c, fiber.StatusBadRequest, "Profil görseli çok büyük")
+		}
+		update["profilePic"] = pic
 	}
 
 	if len(update) == 0 {

@@ -99,7 +99,9 @@ const Dashboard = () => {
             name="bio"
             rows={7}
             value={profile.bio}
-            onChange={handleChange}
+            onChange={(e) => {
+              if (e.target.value.length <= 600) handleChange(e)
+            }}
             className="min-h-[160px] w-full rounded-3xl border border-slate-200 bg-white px-6 py-4 text-sm text-slate-900 shadow-sm transition focus:border-slate-900 focus:outline-none focus:ring-4 focus:ring-accent/10"
             placeholder="Kampanyanın hedefini, bağışların nasıl kullanılacağını ve destekçilerin neden sana güvenmesi gerektiğini anlat."
           />
