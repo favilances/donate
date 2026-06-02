@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"fmt"
 	"math"
 	"strings"
 	"time"
@@ -37,33 +36,31 @@ func RegisterDonationRoutes(router fiber.Router) {
 	protected.Get("/wallet", walletHandler)
 	protected.Post("/donations", createDonationHandler)
 	protected.Get("/donations/selected", selectedDonationsHandler)
-	protected.Get("/events", sseHandler)
+
+	router.Get("/events", sseHandler)
 }
 
 func sseHandler(c *fiber.Ctx) error {
-	user, ok := c.Locals("user").(models.User)
-	if !ok {
-		tokenStr := c.Query("token")
-		if tokenStr == "" {
-			return utils.Error(c, fiber.StatusUnauthorized, "Yetkisiz erişim")
-		}
-		token, err := utils.ValidateToken(tokenStr)
-		if err != nil || !token.Valid {
-			return utils.Error(c, fiber.StatusUnauthorized, "Geçersiz oturum")
-		}
-		claims, _ := token.Claims.(jwt.MapClaims)
-		userID, _ := claims["sub"].(string)
-		objectID, err := primitive.ObjectIDFromHex(userID)
-		if err != nil {
-			return utils.Error(c, fiber.StatusUnauthorized, "Geçersiz kullanıcı")
-		}
-		var userFromDB models.User
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := database.Collection("users").FindOne(ctx, bson.M{"_id": objectID}).Decode(&userFromDB); err != nil {
-			return utils.Error(c, fiber.StatusUnauthorized, "Kullanıcı bulunamadı")
-		}
-		user = userFromDB
+	tokenStr := c.Query("token")
+	if tokenStr == "" {
+		return utils.Error(c, fiber.StatusUnauthorized, "Yetkisiz erişim")
+	}
+	token, err := utils.ValidateToken(tokenStr)
+	if err != nil || !token.Valid {
+		return utils.Error(c, fiber.StatusUnauthorized, "Geçersiz oturum")
+	}
+	claims, _ := token.Claims.(jwt.MapClaims)
+	userID, _ := claims["sub"].(string)
+	objectID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return utils.Error(c, fiber.StatusUnauthorized, "Geçersiz kullanıcı")
+	}
+
+	var user models.User
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := database.Collection("users").FindOne(ctx, bson.M{"_id": objectID}).Decode(&user); err != nil {
+		return utils.Error(c, fiber.StatusUnauthorized, "Kullanıcı bulunamadı")
 	}
 
 	c.Set("Content-Type", "text/event-stream")
