@@ -81,7 +81,7 @@ const WalletOverlay = () => {
     }
 
     eventSource.onerror = () => {
-      eventSource.close()
+      // EventSource auto-reconnects; no need to close
     }
 
     return () => {

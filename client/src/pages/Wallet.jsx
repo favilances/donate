@@ -63,7 +63,6 @@ const Wallet = () => {
 
     eventSource.onerror = () => {
       setLive(false)
-      eventSource.close()
     }
 
     sseRef.current = eventSource
