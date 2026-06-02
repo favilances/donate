@@ -16,7 +16,7 @@ const Footer = () => (
           </Link>
         ))}
       </nav>
-      <p className="text-xs text-slate-500">© 2025 bağışla</p>
+      <p className="text-xs text-slate-500">© 2026 noirLang</p>
     </div>
   </footer>
 )

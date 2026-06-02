@@ -8,6 +8,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/joho/godotenv"
@@ -44,6 +45,17 @@ func main() {
 	if allowedOrigin == "" {
 		allowedOrigin = "http://localhost:5173"
 	}
+
+	app.Use(limiter.New(limiter.Config{
+		Max:        30,
+		Expiration: 1 * time.Minute,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"message": "Çok fazla istek. Lütfen bekleyin."})
+		},
+	}))
 
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     allowedOrigin,
