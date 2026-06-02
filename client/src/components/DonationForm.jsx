@@ -194,8 +194,8 @@ const DonationForm = ({ recipientUsername }) => {
           <CreditCard className="h-5 w-5" />
         </span>
         <div className="flex flex-col">
-          <h3 className="text-lg font-semibold text-slate-900">Test ödemesi oluştur</h3>
-          <span className="text-xs text-slate-500">API bağlantısı olmadan hızlıca senaryo dene.</span>
+          <h3 className="text-lg font-semibold text-slate-900">Bağış yap</h3>
+          <span className="text-xs text-slate-500">Kart bilgileri demo amaçlıdır, gerçek ödeme alınmaz.</span>
         </div>
       </div>
 
@@ -279,7 +279,8 @@ const DonationForm = ({ recipientUsername }) => {
       <div className="flex items-start gap-3 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 text-xs text-slate-500">
         <Info className="mt-0.5 h-4 w-4 text-slate-400" />
         <p>
-          Test senaryosu için aşağıdaki kartı kullanabilirsin:
+          <strong className="text-slate-700">Demo ortamı:</strong> Kart bilgileri toplanır ancak hiçbir ödeme işlenmez.
+          Bağış, sanal cüzdan bakiyesine eklenir. Test kartı:
           <br />
           <span className="font-medium text-slate-700">{TEST_CARD.number} · {TEST_CARD.expiry} · {TEST_CARD.cvc}</span>
         </p>
