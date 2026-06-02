@@ -252,6 +252,16 @@ func walletHandler(c *fiber.Ctx) error {
 		return utils.Error(c, fiber.StatusUnauthorized, "Oturum geçerli değil")
 	}
 
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 20)
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+	skip := (page - 1) * limit
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -260,10 +270,16 @@ func walletHandler(c *fiber.Ctx) error {
 		return utils.Error(c, fiber.StatusInternalServerError, "Cüzdan yüklenemedi")
 	}
 
+	totalCursor, err := database.Collection("donations").CountDocuments(ctx, bson.M{"toUserId": user.ID})
+	if err != nil {
+		return utils.Error(c, fiber.StatusInternalServerError, "Cüzdan yüklenemedi")
+	}
+
 	cursor, err := database.Collection("donations").Aggregate(ctx, bson.A{
 		bson.M{"$match": bson.M{"toUserId": user.ID}},
 		bson.M{"$sort": bson.M{"date": -1}},
-		bson.M{"$limit": 20},
+		bson.M{"$skip": skip},
+		bson.M{"$limit": limit},
 		bson.M{"$lookup": bson.M{
 			"from":         "users",
 			"localField":   "fromUserId",
@@ -304,5 +320,7 @@ func walletHandler(c *fiber.Ctx) error {
 	return utils.Success(c, fiber.StatusOK, fiber.Map{
 		"wallet":    freshUser.Wallet,
 		"donations": donations,
+		"total":     totalCursor,
+		"page":      page,
 	})
 }
