@@ -70,7 +70,7 @@ const Wallet = () => {
     return () => {
       eventSource.close()
     }
-  }, [reloadWallet])
+  }, [reloadWallet, getSSEUrl])
 
   const selectedCount = useMemo(() => selected.size, [selected])
   const hasSelection = selectedCount > 0

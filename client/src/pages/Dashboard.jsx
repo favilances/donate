@@ -26,7 +26,7 @@ const Dashboard = () => {
     }
 
     loadProfile()
-  }, [logout])
+  }, [logout, refreshUser])
 
   const handleChange = (event) => {
     const { name, value } = event.target
