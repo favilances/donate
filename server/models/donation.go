@@ -12,5 +12,4 @@ type Donation struct {
 	ToUserID   primitive.ObjectID `bson:"toUserId" json:"toUserId"`
 	Amount     float64            `bson:"amount" json:"amount"`
 	Date       time.Time          `bson:"date" json:"date"`
-	SessionID  string             `bson:"sessionId" json:"-"`
 }
