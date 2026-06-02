@@ -63,7 +63,7 @@ func main() {
 		AllowOrigins:     allowedOrigin,
 		AllowCredentials: true,
 		AllowHeaders:     "Content-Type, Authorization",
-		AllowMethods:     "GET,POST,PUT,OPTIONS",
+		AllowMethods:     "GET,POST,PUT,DELETE,PATCH,OPTIONS",
 	}))
 
 	app.Get("/health", func(c *fiber.Ctx) error {
